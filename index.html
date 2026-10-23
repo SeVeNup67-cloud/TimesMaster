@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TimesMaster - Ultimate Time & Timetable Arcade</title>
+    <!-- Google Fonts & Tailwind CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.6.0/confetti.browser.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            light: '#a5b4fc',
+                            DEFAULT: '#6366f1',
+                            dark: '#4338ca',
+                            accent: '#f43f5e',
+                            yellow: '#fbbf24',
+                            success: '#10b981',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Fredoka', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+        }
+        .dark-glass {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+        .game-btn {
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+        }
+        .game-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0,0,0,0.15);
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(99, 102, 241, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(244, 63, 94, 0.7); }
+        }
+        .glow-effect { animation: pulseGlow 3s infinite; }
+    </style>
+</head>
+<body id="appBody" class="bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800 min-h-screen text-slate-800 overflow-x-hidden select-none">
+
+    <!-- TOP NAVIGATION & HUD -->
+    <header class="max-w-6xl mx-auto p-4 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-gradient-to-tr from-yellow-400 to-amber-500 rounded-2xl flex items-center justify-center shadow-lg text-2xl font-bold text-white transform -rotate-6">⏰</div>
+            <div>
+                <h1 class="text-3xl font-extrabold text-white tracking-wide font-outfit drop-shadow">TimesMaster</h1>
+                <p class="text-xs text-indigo-200 font-medium">Master Time, Unlock the Universe!</p>
+            </div>
+        </div>
+
+        <!-- PLAYER STATS HUD -->
+        <div class="flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20 text-white">
+            <div class="flex items-center gap-1.5 px-3 py-1 bg-amber-500/30 rounded-xl border border-amber-400/40">
+                <span class="text-xl">🪙</span>
+                <span id="hudCoins" class="font-bold text-amber-300 text-lg">0</span>
+            </div>
+            <div class="flex items-center gap-1.5 px-3 py-1 bg-rose-500/30 rounded-xl border border-rose-400/40">
+                <span class="text-xl">🔥</span>
+                <span id="hudStreak" class="font-bold text-rose-300 text-lg">1 Streak</span>
+            </div>
+            <button onclick="openShop()" class="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-slate-900 font-bold px-4 py-1.5 rounded-xl shadow-md game-btn flex items-center gap-1 text-sm">
+                🛍️ Shop
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-6xl mx-auto p-4 pb-16">
+
+        <!-- DASHBOARD VIEW -->
+        <div id="viewDashboard" class="space-y-6">
+            <!-- WELCOME BANNER -->
+            <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 md:p-8 text-white shadow-2xl relative overflow-hidden border border-white/20 glow-effect">
+                <div class="absolute -right-10 -bottom-10 text-9xl opacity-10">⏳</div>
+                <div class="relative z-10 max-w-xl">
+                    <span class="bg-white/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">Dashboard Active</span>
+                    <h2 class="text-3xl md:text-4xl font-extrabold mt-2 font-outfit">Ready to conquer the clock?</h2>
+                    <p class="text-indigo-100 mt-2 text-sm md:text-base">Play exciting timetable mini-games, organize schedules, beat the alarm clocks, and collect awesome skins for your dashboard!</p>
+                    <div class="mt-5 flex flex-wrap gap-3">
+                        <button onclick="claimDailyReward()" id="dailyBtn" class="bg-amber-400 hover:bg-amber-300 text-slate-900 font-bold px-5 py-2.5 rounded-xl shadow-lg game-btn flex items-center gap-2">
+                            🎁 Daily Bonus (+50 🪙)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GAME MODES GRID -->
+            <h3 class="text-2xl font-bold text-white font-outfit flex items-center gap-2">🎮 Choose Your Game Mode</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <!-- Game 1: Schedule Sorter -->
+                <div class="glass-card rounded-3xl p-6 flex flex-col justify-between shadow-xl hover:scale-[1.02] transition-transform">
+                    <div>
+                        <div class="w-14 h-14 bg-blue-500 rounded-2xl flex items-center justify-center text-3xl shadow-md text-white mb-4">📅</div>
+                        <h4 class="text-xl font-bold text-slate-800">Schedule Sorter</h4>
+                        <p class="text-slate-600 text-sm mt-1">Drag or arrange school & daily activities in correct chronological order!</p>
+                    </div>
+                    <button onclick="startMiniGame('sorter')" class="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-2xl shadow-md game-btn">
+                        Play Now 🚀
+                    </button>
+                </div>
+
+                <!-- Game 2: Clock Crunch -->
+                <div class="glass-card rounded-3xl p-6 flex flex-col justify-between shadow-xl hover:scale-[1.02] transition-transform">
+                    <div>
+                        <div class="w-14 h-14 bg-purple-500 rounded-2xl flex items-center justify-center text-3xl shadow-md text-white mb-4">⏰</div>
+                        <h4 class="text-xl font-bold text-slate-800">Clock Crunch</h4>
+                        <p class="text-slate-600 text-sm mt-1">Read analog clocks accurately before time runs out! Test your speed.</p>
+                    </div>
+                    <button onclick="startMiniGame('clock')" class="mt-6 w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-2xl shadow-md game-btn">
+                        Play Now 🚀
+                    </button>
+                </div>
+
+                <!-- Game 3: Alarm Dodger -->
+                <div class="glass-card rounded-3xl p-6 flex flex-col justify-between shadow-xl hover:scale-[1.02] transition-transform">
+                    <div>
+                        <div class="w-14 h-14 bg-rose-500 rounded-2xl flex items-center justify-center text-3xl shadow-md text-white mb-4">🔔</div>
+                        <h4 class="text-xl font-bold text-slate-800">Alarm Dodger</h4>
+                        <p class="text-slate-600 text-sm mt-1">Turn off ringing alarms in the right sequence before snooze explodes!</p>
+                    </div>
+                    <button onclick="startMiniGame('alarm')" class="mt-6 w-full bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-2xl shadow-md game-btn">
+                        Play Now 🚀
+                    </button>
+                </div>
+
+                <!-- Game 4: Speed Timetable Math -->
+                <div class="glass-card rounded-3xl p-6 flex flex-col justify-between shadow-xl hover:scale-[1.02] transition-transform">
+                    <div>
+                        <div class="w-14 h-14 bg-amber-500 rounded-2xl flex items-center justify-center text-3xl shadow-md text-white mb-4">⚡</div>
+                        <h4 class="text-xl font-bold text-slate-800">Timetable Speed Math</h4>
+                        <p class="text-slate-600 text-sm mt-1">Solve time conversion challenges (minutes to hours, duration math).</p>
+                    </div>
+                    <button onclick="startMiniGame('math')" class="mt-6 w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-2xl shadow-md game-btn">
+                        Play Now 🚀
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- GAMEPLAY ARENA VIEW (Hidden by default) -->
+        <div id="viewGame" class="hidden max-w-2xl mx-auto">
+            <div class="glass-card rounded-3xl p-6 md:p-8 shadow-2xl relative">
+                <!-- Game Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <button onclick="returnToDashboard()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2 rounded-xl text-sm game-btn">
+                        ⬅️ Quit to Dashboard
+                    </button>
+                    <div id="gameScoreHud" class="text-lg font-bold text-indigo-700">Score: <span id="currentScore">0</span></div>
+                    <div id="gameTimerHud" class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-xl font-bold text-sm">⏱️ <span id="timeLeft">30</span>s</div>
+                </div>
+
+                <!-- Dynamic Game Container -->
+                <div id="gameCanvasArea" class="min-h-[300px] flex flex-col justify-center items-center">
+                    <!-- Game content gets injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- SHOP MODAL / VIEW -->
+        <div id="viewShop" class="hidden max-w-4xl mx-auto">
+            <div class="glass-card rounded-3xl p-6 md:p-8 shadow-2xl">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h3 class="text-3xl font-extrabold text-slate-800 font-outfit">🛍️ The Time Shop</h3>
+                        <p class="text-slate-600 text-sm">Customize your dashboard themes, card styles, and exclusive badges!</p>
+                    </div>
+                    <button onclick="returnToDashboard()" class="bg-slate-800 text-white font-bold px-4 py-2 rounded-xl text-sm game-btn">
+                        ✖️ Close Shop
+                    </button>
+                </div>
+
+                <!-- Shop Tabs -->
+                <div class="flex gap-2 mb-6 border-b border-slate-200 pb-3">
+                    <button onclick="switchShopTab('themes')" id="tabThemesBtn" class="px-4 py-2 rounded-xl font-bold bg-indigo-600 text-white text-sm shadow">Dashboard Themes</button>
+                    <button onclick="switchShopTab('badges')" id="tabBadgesBtn" class="px-4 py-2 rounded-xl font-bold bg-slate-200 text-slate-700 text-sm">Exclusive Badges</button>
+                </div>
+
+                <!-- Shop Items Grid -->
+                <div id="shopItemsGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="text-center py-6 text-indigo-200 text-xs">
+        TimesMaster • Built with passion for GitHub Pages 🚀
+    </footer>
+
+    <!-- GAME LOGIC SCRIPT -->
+    <script>
+        // --- GAME STATE ---
+        let gameState = {
+            coins: parseInt(localStorage.getItem('tm_coins')) || 100,
+            streak: parseInt(localStorage.getItem('tm_streak')) || 1,
+            lastDaily: localStorage.getItem('tm_lastDaily') || '',
+            theme: localStorage.getItem('tm_theme') || 'sunset',
+            unlockedThemes: JSON.parse(localStorage.getItem('tm_unlockedThemes')) || ['sunset'],
+            unlockedBadges: JSON.parse(localStorage.getItem('tm_unlockedBadges')) || ['🚀 Rookie'],
+            activeBadge: localStorage.getItem('tm_activeBadge') || '🚀 Rookie'
+        };
+
+        // --- THEMES CONFIGURATION ---
+        const themes = {
+            sunset: { name: 'Sunset Dream', class: 'bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-800' },
+            cyber: { name: 'Cyber Neon', class: 'bg-gradient-to-br from-slate-950 via-emerald-950 to-cyan-950' },
+            sunshine: { name: 'Golden Sunshine', class: 'bg-gradient-to-br from-amber-500 via-orange-600 to-yellow-600' },
+            candy: { name: 'Bubblegum Candy', class: 'bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500' }
+        };
+
+        // --- SHOP ITEMS ---
+        const shopItems = [
+            { id: 'theme_cyber', type: 'theme', key: 'cyber', name: 'Cyber Neon Theme', price: 150, icon: '🌆' },
+            { id: 'theme_sunshine', type: 'theme', key: 'sunshine', name: 'Golden Sunshine Theme', price: 200, icon: '☀️' },
+            { id: 'theme_candy', type: 'theme', key: 'candy', name: 'Bubblegum Candy Theme', price: 250, icon: '🍬' },
+            { id: 'badge_master', type: 'badge', key: '👑 Time Lord', name: '👑 Time Lord Badge', price: 300, icon: '👑' },
+            { id: 'badge_speed', type: 'badge', key: '⚡ Speed Demon', name: '⚡ Speed Demon Badge', price: 400, icon: '⚡' }
+        ];
+
+        // --- INITIALIZATION ---
+        function updateHud() {
+            document.getElementById('hudCoins').innerText = gameState.coins;
+            document.getElementById('hudStreak').innerText = gameState.streak + ' Streak';
+            
+            // Apply Theme
+            const currentThemeObj = themes[gameState.theme] || themes.sunset;
+            document.getElementById('appBody').className = `${currentThemeObj.class} min-h-screen text-slate-800 overflow-x-hidden select-none`;
+
+            // Save to LocalStorage
+            localStorage.setItem('tm_coins', gameState.coins);
+            localStorage.setItem('tm_streak', gameState.streak);
+            localStorage.setItem('tm_lastDaily', gameState.lastDaily);
+            localStorage.setItem('tm_theme', gameState.theme);
+            localStorage.setItem('tm_unlockedThemes', JSON.stringify(gameState.unlockedThemes));
+            localStorage.setItem('tm_unlockedBadges', JSON.stringify(gameState.unlockedBadges));
+            localStorage.setItem('tm_activeBadge', gameState.activeBadge);
+        }
+
+        function claimDailyReward() {
+            const today = new Date().toDateString();
+            if (gameState.lastDaily === today) {
+                alert("You already claimed your daily reward today! Come back tomorrow!");
+                return;
+            }
+            gameState.coins += 50;
+            gameState.lastDaily = today;
+            updateHud();
+            confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+            alert("🎉 +50 Coins claimed successfully!");
+        }
+
+        // --- VIEW SWITCHING ---
+        function returnToDashboard() {
+            stopActiveGame();
+            document.getElementById('viewDashboard').classList.remove('hidden');
+            document.getElementById('viewGame').classList.add('hidden');
+            document.getElementById('viewShop').classList.add('hidden');
+        }
+
+        function openShop() {
+            document.getElementById('viewDashboard').classList.add('hidden');
+            document.getElementById('viewGame').classList.add('hidden');
+            document.getElementById('viewShop').classList.remove('hidden');
+            renderShop('themes');
+        }
+
+        function switchShopTab(tab) {
+            const themesBtn = document.getElementById('tabThemesBtn');
+            const badgesBtn = document.getElementById('tabBadgesBtn');
+            if (tab === 'themes') {
+                themesBtn.className = "px-4 py-2 rounded-xl font-bold bg-indigo-600 text-white text-sm shadow";
+                badgesBtn.className = "px-4 py-2 rounded-xl font-bold bg-slate-200 text-slate-700 text-sm";
+                renderShop('themes');
+            } else {
+                badgesBtn.className = "px-4 py-2 rounded-xl font-bold bg-indigo-600 text-white text-sm shadow";
+                themesBtn.className = "px-4 py-2 rounded-xl font-bold bg-slate-200 text-slate-700 text-sm";
+                renderShop('badges');
+            }
+        }
+
+        function renderShop(type) {
+            const grid = document.getElementById('shopItemsGrid');
+            grid.innerHTML = '';
+            
+            shopItems.filter(item => item.type === (type === 'themes' ? 'theme' : 'badge')).forEach(item => {
+                let isUnlocked = item.type === 'theme' ? gameState.unlockedThemes.includes(item.key) : gameState.unlockedBadges.includes(item.key);
+                let isActive = item.type === 'theme' ? gameState.theme === item.key : gameState.activeBadge === item.key;
+
+                let btnHtml = '';
+                if (isActive) {
+                    btnHtml = `<span class="text-xs bg-emerald-500 text-white px-3 py-1.5 rounded-xl font-bold">Equipped</span>`;
+                } else if (isUnlocked) {
+                    btnHtml = `<button onclick="equipItem('${item.type}', '${item.key}')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl game-btn">Equip</button>`;
+                } else {
+                    btnHtml = `<button onclick="buyItem('${item.id}', '${item.type}', '${item.key}', ${item.price})" class="bg-amber-500 hover:bg-amber-400 text-slate-900 text-xs font-bold px-4 py-2 rounded-xl game-btn flex items-center gap-1">🪙 ${item.price}</button>`;
+                }
+
+                grid.innerHTML += `
+                    <div class="bg-white/80 p-5 rounded-2xl flex flex-col justify-between shadow-md border border-slate-200">
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl p-2 bg-slate-100 rounded-xl">${item.icon}</span>
+                            <div>
+                                <h5 class="font-bold text-slate-800">${item.name}</h5>
+                                <p class="text-xs text-slate-500">${item.type === 'theme' ? 'Dashboard Skin' : 'Profile Badge'}</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex justify-end">
+                            ${btnHtml}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function buyItem(id, type, key, price) {
+            if (gameState.coins < price) {
+                alert("❌ Not enough coins! Play mini-games to earn more.");
+                return;
+            }
+            gameState.coins -= price;
+            if (type === 'theme') gameState.unlockedThemes.push(key);
+            else gameState.unlockedBadges.push(key);
+            
+            updateHud();
+            renderShop(type === 'theme' ? 'themes' : 'badges');
+            confetti({ particleCount: 50, spread: 60 });
+            alert("🎉 Purchase successful!");
+        }
+
+        function equipItem(type, key) {
+            if (type === 'theme') gameState.theme = key;
+            else gameState.activeBadge = key;
+            updateHud();
+            renderShop(type === 'theme' ? 'themes' : 'badges');
+        }
+
+        // --- MINI-GAMES ENGINE ---
+        let activeInterval = null;
+        let currentGameScore = 0;
+        let currentGameTime = 30;
+
+        function startMiniGame(mode) {
+            document.getElementById('viewDashboard').classList.add('hidden');
+            document.getElementById('viewGame').classList.remove('hidden');
+            
+            currentGameScore = 0;
+            currentGameTime = 30;
+            document.getElementById('currentScore').innerText = currentGameScore;
+            document.getElementById('timeLeft').innerText = currentGameTime;
+
+            if (mode === 'sorter') initScheduleSorter();
+            else if (mode === 'clock') initClockCrunch();
+            else if (mode === 'alarm') initAlarmDodger();
+            else if (mode === 'math') initSpeedMath();
+        }
+
+        function stopActiveGame() {
+            if (activeInterval) clearInterval(activeInterval);
+        }
+
+        function startTimer(callbackEnd) {
+            if (activeInterval) clearInterval(activeInterval);
+            activeInterval = setInterval(() => {
+                currentGameTime--;
+                document.getElementById('timeLeft').innerText = currentGameTime;
+                if (currentGameTime <= 0) {
+                    clearInterval(activeInterval);
+                    callbackEnd();
+                }
+            }, 1000);
+        }
+
+        function endGame(score) {
+            stopActiveGame();
+            const earnedCoins = score * 5;
+            gameState.coins += earnedCoins;
+            updateHud();
+
+            confetti({ particleCount: 100, spread: 80, origin: { y: 0.6 } });
+            
+            const canvasArea = document.getElementById('gameCanvasArea');
+            canvasArea.innerHTML = `
+                <div class="text-center py-6">
+                    <h3 class="text-3xl font-extrabold text-slate-800 font-outfit">🎉 Game Over!</h3>
+                    <p class="text-slate-600 mt-2">You scored <span class="font-bold text-indigo-600">${score}</span> points!</p>
+                    <p class="text-amber-600 font-bold mt-1 text-lg">🪙 Earned +${earnedCoins} Coins!</p>
+                    <div class="mt-6 flex justify-center gap-3">
+                        <button onclick="returnToDashboard()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl shadow game-btn">Dashboard</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- MINI-GAME 1: SCHEDULE SORTER ---
+        let scheduleItems = [];
+        function initScheduleSorter() {
+            const canvasArea = document.getElementById('gameCanvasArea');
+            const tasks = [
+                { time: '08:00 AM', task: 'Wake Up & Breakfast' },
+                { time: '09:00 AM', task: 'Math Class' },
+                { time: '12:00 PM', task: 'Lunch Break' },
+                { time: '02:00 PM', task: 'Science Lab' },
+                { time: '05:00 PM', task: 'Football Practice' },
+                { time: '08:00 PM', task: 'Homework & Sleep' }
+            ];
+            
+            // Shuffle tasks
+            scheduleItems = [...tasks].sort(() => Math.random() - 0.5);
+            renderSorterBoard();
+            startTimer(() => endGame(currentGameScore));
+        }
+
+        function renderSorterBoard() {
+            const canvasArea = document.getElementById('gameCanvasArea');
+            let html = `
+                <div class="w-full">
+                    <h4 class="font-bold text-slate-700 text-center mb-3">Order the Timetable chronologically!</h4>
+                    <div id="sortList" class="space-y-2">
+            `;
+            scheduleItems.forEach((item, index) => {
+                html += `
+                    <div class="bg-white/90 p-3 rounded-xl shadow flex justify-between items-center border border-slate-200">
+                        <span class="font-bold text-indigo-700">${item.time}</span>
+                        <span class="text-slate-800 text-sm font-semibold">${item.task}</span>
+                        <div class="flex gap-1">
+                            <button onclick="moveSorter(${index}, -1)" class="bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded text-xs font-bold">⬆️</button>
+                            <button onclick="moveSorter(${index}, 1)" class="bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded text-xs font-bold">⬇️</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>
+                    <button onclick="checkSorterOrder()" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl shadow game-btn">Check Order ✅</button>
+                </div>
+            `;
+            canvasArea.innerHTML = html;
+        }
+
+        function moveSorter(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex >= 0 && newIndex < scheduleItems.length) {
+                const temp = scheduleItems[index];
+                scheduleItems[index] = scheduleItems[newIndex];
+                scheduleItems[newIndex] = temp;
+                renderSorterBoard();
+            }
+        }
+
+        function checkSorterOrder() {
+            const correctTimes = ['08:00 AM', '09:00 AM', '12:00 PM', '02:00 PM', '05:00 PM', '08:00 PM'];
+            let isCorrect = scheduleItems.every((item, idx) => item.time === correctTimes[idx]);
+            if (isCorrect) {
+                currentGameScore += 10;
+                document.getElementById('currentScore').innerText = currentGameScore;
+                alert("✨ Perfect Timetable! +10 Points");
+                initScheduleSorter();
+            } else {
+                alert("❌ Not quite right yet! Check the times again.");
+            }
+        }
+
+        // --- MINI-GAME 2: CLOCK CRUNCH ---
+        function initClockCrunch() {
+            nextClockQuestion();
+            startTimer(() => endGame(currentGameScore));
+        }
+
+        function nextClockQuestion() {
+            const canvasArea = document.getElementById('gameCanvasArea');
+            const hours = Math.floor(Math.random() * 11) + 1;
+            const minutes = [0, 15, 30, 45][Math.floor(Math.random() * 4)];
+            const correctStr = `${hours}:${minutes === 0 ? '00' : minutes}`;
+
+            // Generate options
+            let options = [correctStr];
+            while (options.length < 4) {
+                let rH = Math.floor(Math.random() * 11) + 1;
+                let rM = [0, 15, 30, 45][Math.floor(Math.random() * 4)];
+                let rStr = `${rH}:${rM === 0 ? '00' : rM}`;
+                if (!options.includes(rStr)) options.push(rStr);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            canvasArea.innerHTML = `
+                <div class="text-center w-full">
+                    <div class="text-6xl my-4">🕒</div>
+                    <p class="text-slate-600 text-sm mb-2">What time does this clock show?</p>
+                    <h3 class="text-2xl font-bold text-indigo-700 mb-6">Hour hand near ${hours}, minute hand on ${minutes === 0 ? '12' : minutes === 15 ? '3' : minutes === 30 ? '6' : '9'}</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        ${options.map(opt => `<button onclick="checkClockAnswer('${opt}', '${correctStr}')" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-2xl shadow game-btn text-lg">${opt}</button>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function checkClockAnswer(selected, correct) {
+            if (selected === correct) {
+                currentGameScore += 5;
+                document.getElementById('currentScore').innerText = currentGameScore;
+                nextClockQuestion();
+            } else {
+                currentGameTime = Math.max(0, currentGameTime - 3);
+                alert("❌ Incorrect! -3 seconds penalty.");
+            }
+        }
+
+        // --- MINI-GAME 3: ALARM DODGER ---
+        let alarmsList = [];
+        function initAlarmDodger() {
+            alarmsList = [
+                { id: 1, time: '07:00 AM' },
+                { id: 2, time: '07:05 AM' },
+                { id: 3, time: '07:10 AM' },
+                { id: 4, time: '07:15 AM' }
+            ].sort(() => Math.random() - 0.5);
+
+            renderAlarmBoard();
+            startTimer(() => endGame(currentGameScore));
+        }
+
+        function renderAlarmBoard() {
+            const canvasArea = document.getElementById('gameCanvasArea');
+            canvasArea.innerHTML = `
+                <div class="w-full text-center">
+                    <h4 class="font-bold text-slate-700 mb-2">Turn off alarms from earliest to latest!</h4>
+                    <div class="grid grid-cols-2 gap-3 my-4">
+                        ${alarmsList.map(alarm => `
+                            <button onclick="clickAlarm('${alarm.time}')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold p-4 rounded-2xl shadow game-btn flex flex-col items-center gap-1">
+                                <span class="text-2xl">⏰</span>
+                                <span>${alarm.time}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        let expectedAlarmIndex = 0;
+        const alarmOrder = ['07:00 AM', '07:05 AM', '07:10 AM', '07:15 AM'];
+
+        function clickAlarm(time) {
+            if (time === alarmOrder[expectedAlarmIndex]) {
+                expectedAlarmIndex++;
+                alarmsList = alarmsList.filter(a => a.time !== time);
+                if (alarmsList.length === 0) {
+                    currentGameScore += 15;
+                    document.getElementById('currentScore').innerText = currentGameScore;
+                    expectedAlarmIndex = 0;
+                    initAlarmDodger();
+                } else {
+                    renderAlarmBoard();
+                }
+            } else {
+                alert("❌ Wrong alarm! Hit the earliest one first.");
+            }
+        }
+
+        // --- MINI-GAME 4: SPEED TIMETABLE MATH ---
+        function initSpeedMath() {
+            nextMathQuestion();
+            startTimer(() => endGame(currentGameScore));
+        }
+
+        function nextMathQuestion() {
+            const canvasArea = document.getElementById('gameCanvasArea');
+            const problems = [
+                { q: 'How many minutes in 2 hours?', a: '120', options: ['90', '120', '150', '180'] },
+                { q: 'If math class starts at 9:00 AM and lasts 45 mins, when does it end?', a: '9:45 AM', options: ['9:30 AM', '9:45 AM', '10:00 AM', '10:15 AM'] },
+                { q: 'How many hours in 180 minutes?', a: '3 hours', options: ['2 hours', '2.5 hours', '3 hours', '4 hours'] },
+                { q: 'If recess is 30 mins and starts at 10:15 AM, when is it over?', a: '10:45 AM', options: ['10:45 AM', '11:00 AM', '10:30 AM', '11:15 AM'] }
+            ];
+
+            const prob = problems[Math.floor(Math.random() * problems.length)];
+            canvasArea.innerHTML = `
+                <div class="text-center w-full">
+                    <div class="text-5xl my-2">⚡</div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-6">${prob.q}</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        ${prob.options.map(opt => `<button onclick="checkMathAnswer('${opt}', '${prob.a}')" class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold py-3 rounded-2xl shadow game-btn text-base">${opt}</button>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function checkMathAnswer(selected, correct) {
+            if (selected === correct) {
+                currentGameScore += 10;
+                document.getElementById('currentScore').innerText = currentGameScore;
+                nextMathQuestion();
+            } else {
+                currentGameTime = Math.max(0, currentGameTime - 3);
+                alert("❌ Incorrect! -3 seconds penalty.");
+            }
+        }
+
+        // Run initial HUD update on page load
+        updateHud();
+    </script>
+</body>
+</html>
